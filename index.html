@@ -59,7 +59,7 @@
         .item-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
         .data-card { background: var(--bg-card); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); position: relative; }
         .badge { position: absolute; top: 20px; right: 20px; background: var(--bg-body); padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; color: var(--primary); }
-        .data-card h4 { margin: 10px 0 5px; font-size: 16px; padding-right: 60px;}
+        .data-card h4 { margin: 10px 0 5px; font-size: 16px; padding-right: 60px; line-height: 1.4; }
         .data-card p { font-size: 14px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5; }
         .quote-box { background: var(--bg-body); border-left: 4px solid var(--primary); padding: 12px; border-radius: 4px 8px 8px 4px; font-size: 13px; font-style: italic; margin-bottom: 15px; }
 
@@ -103,7 +103,7 @@
         </div>
 
         <div class="search-container" id="search-box">
-            <input type="text" id="searchInput" placeholder="🔍 Cari nama penulis, variabel, atau kata kunci kutipan..." onkeyup="renderData()">
+            <input type="text" id="searchInput" placeholder="🔍 Cari nama judul, penulis, variabel, atau kata kunci..." onkeyup="renderData()">
         </div>
 
         <!-- Dashboard Section -->
@@ -123,17 +123,21 @@
             <!-- ADVANCED QUICK NOTES / TO-DO LIST -->
             <div class="dash-card">
                 <h3>💡 Task & Quick Notes</h3>
-                <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Catat revisi dosen, target hari ini, atau ide mendadak lu di sini.</p>
+                <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Catat revisi dosen, target hari ini, atau ide di sini.</p>
                 
-                <!-- Input Area -->
+                <!-- Input Area Baru (Ada Pilihan Tipe) -->
                 <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-                    <select id="note-mark" style="width:auto; padding:10px; border:2px solid var(--border); border-radius:8px; background:var(--bg-body); color:var(--text-main); font-weight:bold; outline:none; cursor:pointer;">
+                    <select id="note-type" style="padding:10px; border:2px solid var(--border); border-radius:8px; background:var(--bg-body); color:var(--text-main); font-weight:bold; outline:none; cursor:pointer;">
+                        <option value="task">☑️ Task (Checklist)</option>
+                        <option value="note">📌 Sticky Note</option>
+                    </select>
+                    <select id="note-mark" style="padding:10px; border:2px solid var(--border); border-radius:8px; background:var(--bg-body); color:var(--text-main); font-weight:bold; outline:none; cursor:pointer;">
                         <option value="🎯 Target">🎯 Target</option>
                         <option value="🔥 Urgent">🔥 Urgent</option>
                         <option value="📝 Revisi">📝 Revisi</option>
                         <option value="💡 Ide">💡 Ide</option>
                     </select>
-                    <input type="text" id="note-input" placeholder="Ketik tugas atau pesan dospem di sini..." style="flex:1; padding:10px; border:2px solid var(--border); border-radius:8px; background:var(--bg-body); color:var(--text-main); outline:none;" onkeypress="if(event.key==='Enter') addNote()">
+                    <input type="text" id="note-input" placeholder="Ketik tugas atau catatan di sini..." style="flex:1; padding:10px; border:2px solid var(--border); border-radius:8px; background:var(--bg-body); color:var(--text-main); outline:none; min-width:200px;" onkeypress="if(event.key==='Enter') addNote()">
                     <button class="btn-primary" onclick="addNote()">Tambah</button>
                 </div>
 
@@ -176,7 +180,7 @@
         // === 🛡️ ADVANCED DATABASE SYSTEM ===
         const DB_KEY_LIT = 'syla_lit_master';
         const DB_KEY_IND = 'syla_ind_master';
-        const DB_KEY_NOTES = 'syla_quick_notes_v2'; // Key baru biar ga error sama yg lama
+        const DB_KEY_NOTES = 'syla_quick_notes_v2';
 
         function loadDatabase(key) {
             try {
@@ -202,9 +206,9 @@
             notes: loadDatabase(DB_KEY_NOTES)
         };
 
-        // Jika baru pertama kali pakai, kasih note contoh
         if(db.notes.length === 0) {
-            db.notes.push({ id: 1, mark: '💡 Ide', text: 'Reminder: Prospect Theory digabung ke TCT.', isDone: false });
+            db.notes.push({ id: 1, type: 'note', mark: '💡 Ide', text: 'Catatan pertama! Ini adalah format Sticky Note biasa tanpa checklist.', isDone: false });
+            db.notes.push({ id: 2, type: 'task', mark: '🎯 Target', text: 'Selesaikan sintesis 5 jurnal malam ini.', isDone: false });
             saveToDatabase(DB_KEY_NOTES, db.notes);
         }
 
@@ -246,7 +250,9 @@
             if(!text) return;
             
             const mark = document.getElementById('note-mark').value;
-            db.notes.unshift({ id: Date.now(), mark: mark, text: text, isDone: false });
+            const type = document.getElementById('note-type').value;
+            
+            db.notes.unshift({ id: Date.now(), type: type, mark: mark, text: text, isDone: false });
             
             saveToDatabase(DB_KEY_NOTES, db.notes);
             document.getElementById('note-input').value = '';
@@ -255,7 +261,7 @@
 
         function toggleNote(id) {
             const note = db.notes.find(n => n.id === id);
-            if(note) {
+            if(note && note.type !== 'note') { 
                 note.isDone = !note.isDone;
                 saveToDatabase(DB_KEY_NOTES, db.notes);
                 renderNotes();
@@ -275,7 +281,7 @@
         }
 
         function deleteNote(id) {
-            if(confirm("Yakin mau hapus catatan ini?")) {
+            if(confirm("Yakin mau hapus item ini?")) {
                 db.notes = db.notes.filter(n => n.id !== id);
                 saveToDatabase(DB_KEY_NOTES, db.notes);
                 renderNotes();
@@ -283,10 +289,10 @@
         }
 
         function getMarkColor(mark) {
-            if(mark.includes('Target')) return 'var(--success)'; // Green
-            if(mark.includes('Urgent')) return 'var(--danger)'; // Red
-            if(mark.includes('Revisi')) return '#f7b801'; // Yellow
-            if(mark.includes('Ide')) return '#4cc9f0'; // Blue
+            if(mark.includes('Target')) return 'var(--success)'; 
+            if(mark.includes('Urgent')) return 'var(--danger)'; 
+            if(mark.includes('Revisi')) return '#f7b801'; 
+            if(mark.includes('Ide')) return '#4cc9f0'; 
             return 'var(--primary)';
         }
 
@@ -297,13 +303,15 @@
                 return;
             }
             
-            container.innerHTML = db.notes.map(note => `
-                <div style="background:var(--bg-body); padding:12px 15px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border-left:4px solid ${getMarkColor(note.mark)}; opacity: ${note.isDone ? '0.6' : '1'}; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
+            container.innerHTML = db.notes.map(note => {
+                const isTask = note.type !== 'note'; // Kalau bukan 'note', berarti dia 'task' (atau data lama)
+                return `
+                <div style="background:var(--bg-body); padding:12px 15px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border-left:4px solid ${getMarkColor(note.mark)}; opacity: ${note.isDone && isTask ? '0.6' : '1'}; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
                     <div style="display:flex; align-items:center; gap:15px; flex:1;">
-                        <input type="checkbox" ${note.isDone ? 'checked' : ''} onchange="toggleNote(${note.id})" style="width:20px; height:20px; cursor:pointer; accent-color:var(--primary);">
+                        ${isTask ? `<input type="checkbox" ${note.isDone ? 'checked' : ''} onchange="toggleNote(${note.id})" style="width:20px; height:20px; cursor:pointer; accent-color:var(--primary);">` : `<span style="font-size:20px;">📌</span>`}
                         <div style="display:flex; flex-direction:column; gap:4px;">
                             <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">${note.mark}</span>
-                            <span style="font-size:14px; font-weight:500; text-decoration:${note.isDone ? 'line-through' : 'none'}; color:${note.isDone ? 'var(--text-muted)' : 'var(--text-main)'}; cursor:pointer;" onclick="toggleNote(${note.id})">${note.text}</span>
+                            <span style="font-size:14px; font-weight:500; text-decoration:${note.isDone && isTask ? 'line-through' : 'none'}; color:${note.isDone && isTask ? 'var(--text-muted)' : 'var(--text-main)'}; ${isTask ? 'cursor:pointer;' : ''}" ${isTask ? `onclick="toggleNote(${note.id})"` : ''}>${note.text}</span>
                         </div>
                     </div>
                     <div style="display:flex; gap:8px;">
@@ -311,7 +319,8 @@
                         <button onclick="deleteNote(${note.id})" style="background:var(--danger); border:none; padding:6px; border-radius:6px; cursor:pointer; color:white; font-size:12px; box-shadow:var(--shadow);" title="Hapus">🗑️</button>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         // === MODAL & FORMS ===
@@ -323,10 +332,11 @@
             if (currentTab === 'literatur') {
                 title.innerText = '📚 Tambah Sintesis Jurnal';
                 container.innerHTML = `
+                    <div class="form-group"><label>Judul Jurnal / Artikel</label><input type="text" id="inp-judul" placeholder="Contoh: Understanding the impact of..." required></div>
                     <div class="form-group"><label>Penulis & Tahun</label><input type="text" id="inp-penulis" placeholder="Contoh: Kahneman & Tversky (1979)" required></div>
                     <div class="form-group"><label>Fokus Variabel / Konstruk</label><input type="text" id="inp-var" placeholder="Contoh: Loss Aversion" required></div>
                     <div class="form-group"><label>Kutipan PDF Asli</label><textarea id="inp-kutipan" placeholder="Paste bahasa Inggrisnya di sini..."></textarea></div>
-                    <div class="form-group"><label>Ide / Posisi di Bab 2</label><textarea id="inp-ide" placeholder="Contoh: Buat transisi ke TCT..."></textarea></div>
+                    <div class="form-group"><label>Ide / Posisi</label><textarea id="inp-ide" placeholder="Contoh: Buat transisi ke TCT..."></textarea></div>
                 `;
             } else if (currentTab === 'indikator') {
                 title.innerText = '🎯 Tambah Indikator (Outer Model)';
@@ -349,11 +359,14 @@
         // === SIMPAN & HAPUS DATA JURNAL ===
         function saveData() {
             if (currentTab === 'literatur') {
+                const judul = document.getElementById('inp-judul').value.trim();
                 const penulis = document.getElementById('inp-penulis').value.trim();
-                if(!penulis) return showToast('Penulis tidak boleh kosong!', true);
+                
+                if(!judul || !penulis) return showToast('Judul dan Penulis wajib diisi!', true);
 
                 db.literatur.unshift({
                     id: Date.now(), 
+                    judul: judul,
                     penulis: penulis,
                     variabel: document.getElementById('inp-var').value.trim() || 'Umum',
                     kutipan: document.getElementById('inp-kutipan').value.trim(),
@@ -403,6 +416,7 @@
             // Render Literatur
             const gridLit = document.getElementById('lit-grid');
             const filteredLit = db.literatur.filter(item => 
+                (item.judul && item.judul.toLowerCase().includes(searchQuery)) ||
                 (item.penulis && item.penulis.toLowerCase().includes(searchQuery)) || 
                 (item.variabel && item.variabel.toLowerCase().includes(searchQuery)) ||
                 (item.kutipan && item.kutipan.toLowerCase().includes(searchQuery)) ||
@@ -410,16 +424,17 @@
             );
 
             if (filteredLit.length === 0) {
-                gridLit.innerHTML = `<p style="color:var(--text-muted); text-align:center; width:100%; grid-column: 1 / -1;">${searchQuery ? 'Pencarian tidak ditemukan 🧐' : 'Belum ada sintesis jurnal. Gas kerjain Bab 2!'}</p>`;
+                gridLit.innerHTML = `<p style="color:var(--text-muted); text-align:center; width:100%; grid-column: 1 / -1;">${searchQuery ? 'Pencarian tidak ditemukan 🧐' : 'Belum ada sintesis jurnal. Gas kerjain Skripsi!'}</p>`;
             } else {
                 gridLit.innerHTML = filteredLit.map(item => `
                     <div class="data-card">
                         <span class="badge">${item.variabel}</span>
-                        <h4>${item.penulis}</h4>
+                        <h4 style="margin-top:20px; margin-bottom:5px;">${item.judul || 'Tanpa Judul'}</h4>
+                        <p style="color:var(--primary); font-weight:600; font-size:13px; margin-bottom:12px;">👤 ${item.penulis}</p>
                         ${item.kutipan ? `<div class="quote-box">"${item.kutipan}"</div>` : ''}
                         <p><strong>Ide:</strong> ${item.ide}</p>
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
-                            <span style="font-size:10px; color:var(--border);">${item.timestamp}</span>
+                            <span style="font-size:10px; color:var(--border);">${item.timestamp || ''}</span>
                             <button class="btn-danger" onclick="deleteItem('literatur', ${item.id})">Hapus</button>
                         </div>
                     </div>
@@ -445,7 +460,7 @@
                         <h4 style="margin-top:5px; padding-right:0;">"${item.indo}"</h4>
                         <p style="font-size:12px">Asli: <i>${item.asli}</i></p>
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
-                            <span style="font-size:10px; color:var(--border);">${item.timestamp}</span>
+                            <span style="font-size:10px; color:var(--border);">${item.timestamp || ''}</span>
                             <button class="btn-danger" onclick="deleteItem('indikator', ${item.id})">Hapus</button>
                         </div>
                     </div>
@@ -487,7 +502,7 @@
                     
                     db.literatur = imported.literatur || []; 
                     db.indikator = imported.indikator || [];
-                    db.notes = imported.notes || []; // Import notes juga
+                    db.notes = imported.notes || []; 
                     
                     saveToDatabase(DB_KEY_LIT, db.literatur);
                     saveToDatabase(DB_KEY_IND, db.indikator);
