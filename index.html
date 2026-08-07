@@ -73,10 +73,6 @@
         input:focus, select:focus, textarea:focus { border-color: var(--primary); }
         textarea { height: 100px; resize: none; }
         
-        /* Quick Notes Textarea Khusus */
-        .notes-area { width: 100%; height: 80px; border: 2px dashed var(--border); border-radius: 8px; padding: 12px; background: transparent; color: var(--text-main); font-size: 14px; outline: none; resize: none; transition: 0.3s; }
-        .notes-area:focus { border-color: var(--primary); background: var(--bg-body); }
-        
         /* FAB */
         .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--primary); color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 30px; box-shadow: 0 10px 25px rgba(67, 97, 238, 0.5); border: none; cursor: pointer; z-index: 50; transition: transform 0.2s; }
         .fab:active { transform: scale(0.95); }
@@ -106,7 +102,6 @@
             <div class="tab" onclick="switchTab('indikator')">🎯 Indikator (SmartPLS)</div>
         </div>
 
-        <!-- FITUR BARU: SEARCH BAR (Cuma muncul di tab Jurnal & Indikator) -->
         <div class="search-container" id="search-box">
             <input type="text" id="searchInput" placeholder="🔍 Cari nama penulis, variabel, atau kata kunci kutipan..." onkeyup="renderData()">
         </div>
@@ -125,28 +120,38 @@
                 </div>
             </div>
             
-            <!-- QUICK NOTES EDITABLE -->
+            <!-- ADVANCED QUICK NOTES / TO-DO LIST -->
             <div class="dash-card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h3>💡 Quick Notes untuk Bab 2</h3>
-                    <span id="note-status" style="font-size:11px; font-weight:bold; color:var(--success); opacity:0; transition:0.3s;">Tersimpan ✔️</span>
+                <h3>💡 Task & Quick Notes</h3>
+                <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Catat revisi dosen, target hari ini, atau ide mendadak lu di sini.</p>
+                
+                <!-- Input Area -->
+                <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+                    <select id="note-mark" style="width:auto; padding:10px; border:2px solid var(--border); border-radius:8px; background:var(--bg-body); color:var(--text-main); font-weight:bold; outline:none; cursor:pointer;">
+                        <option value="🎯 Target">🎯 Target</option>
+                        <option value="🔥 Urgent">🔥 Urgent</option>
+                        <option value="📝 Revisi">📝 Revisi</option>
+                        <option value="💡 Ide">💡 Ide</option>
+                    </select>
+                    <input type="text" id="note-input" placeholder="Ketik tugas atau pesan dospem di sini..." style="flex:1; padding:10px; border:2px solid var(--border); border-radius:8px; background:var(--bg-body); color:var(--text-main); outline:none;" onkeypress="if(event.key==='Enter') addNote()">
+                    <button class="btn-primary" onclick="addNote()">Tambah</button>
                 </div>
-                <textarea id="quickNotesInput" class="notes-area" oninput="saveQuickNotes()" placeholder="Ketik catatan penting, revisi dospem, atau target ngerjain skripsi lu hari ini di sini... (Otomatis tersimpan)"></textarea>
+
+                <!-- Notes Container -->
+                <div id="notes-container" style="display:flex; flex-direction:column; gap:12px; max-height: 400px; overflow-y: auto; padding-right: 5px;">
+                    <!-- Notes render here via JS -->
+                </div>
             </div>
         </div>
 
         <!-- Literatur Section -->
         <div id="literatur" class="content-section">
-            <div class="item-grid" id="lit-grid">
-                <!-- Cards render here -->
-            </div>
+            <div class="item-grid" id="lit-grid"></div>
         </div>
 
         <!-- Indikator Section -->
         <div id="indikator" class="content-section">
-            <div class="item-grid" id="ind-grid">
-                <!-- Cards render here -->
-            </div>
+            <div class="item-grid" id="ind-grid"></div>
         </div>
     </div>
 
@@ -160,9 +165,7 @@
                 <h2 id="modal-title" style="font-size:18px;">Tambah Data</h2>
                 <button class="btn-icon" onclick="closeModal()">✕</button>
             </div>
-            
             <div id="form-container"></div>
-            
             <button class="btn-primary" style="width:100%; justify-content:center; margin-top:20px;" onclick="saveData()">Simpan Data</button>
         </div>
     </div>
@@ -173,7 +176,7 @@
         // === 🛡️ ADVANCED DATABASE SYSTEM ===
         const DB_KEY_LIT = 'syla_lit_master';
         const DB_KEY_IND = 'syla_ind_master';
-        const DB_KEY_NOTES = 'syla_quick_notes';
+        const DB_KEY_NOTES = 'syla_quick_notes_v2'; // Key baru biar ga error sama yg lama
 
         function loadDatabase(key) {
             try {
@@ -195,10 +198,15 @@
         let currentTab = 'dashboard';
         let db = {
             literatur: loadDatabase(DB_KEY_LIT),
-            indikator: loadDatabase(DB_KEY_IND)
+            indikator: loadDatabase(DB_KEY_IND),
+            notes: loadDatabase(DB_KEY_NOTES)
         };
-        
-        let noteTimeout;
+
+        // Jika baru pertama kali pakai, kasih note contoh
+        if(db.notes.length === 0) {
+            db.notes.push({ id: 1, mark: '💡 Ide', text: 'Reminder: Prospect Theory digabung ke TCT.', isDone: false });
+            saveToDatabase(DB_KEY_NOTES, db.notes);
+        }
 
         // === UI FUNCTIONS ===
         function toggleTheme() {
@@ -217,11 +225,9 @@
             else if(tab === 'literatur') tabs[1].classList.add('active');
             else if(tab === 'indikator') tabs[2].classList.add('active');
             
-            // Atur FAB dan Search Box
             document.querySelector('.fab').style.display = tab === 'dashboard' ? 'none' : 'flex';
             document.getElementById('search-box').style.display = tab === 'dashboard' ? 'none' : 'block';
             
-            // Bersihin text search tiap ganti tab
             document.getElementById('searchInput').value = '';
             renderData();
         }
@@ -234,28 +240,78 @@
             setTimeout(() => toast.style.bottom = '-100px', 3000);
         }
 
-        // === QUICK NOTES SAVER ===
-        function saveQuickNotes() {
-            const val = document.getElementById('quickNotesInput').value;
-            localStorage.setItem(DB_KEY_NOTES, val);
+        // === 📝 TASK & QUICK NOTES LOGIC ===
+        function addNote() {
+            const text = document.getElementById('note-input').value.trim();
+            if(!text) return;
             
-            // Animasi tulisan "Tersimpan"
-            const statusIndicator = document.getElementById('note-status');
-            statusIndicator.style.opacity = '1';
+            const mark = document.getElementById('note-mark').value;
+            db.notes.unshift({ id: Date.now(), mark: mark, text: text, isDone: false });
             
-            clearTimeout(noteTimeout);
-            noteTimeout = setTimeout(() => {
-                statusIndicator.style.opacity = '0';
-            }, 1000);
+            saveToDatabase(DB_KEY_NOTES, db.notes);
+            document.getElementById('note-input').value = '';
+            renderNotes();
         }
 
-        function loadQuickNotes() {
-            const savedNotes = localStorage.getItem(DB_KEY_NOTES);
-            if (savedNotes !== null) {
-                document.getElementById('quickNotesInput').value = savedNotes;
-            } else {
-                document.getElementById('quickNotesInput').value = "Reminder: Prospect Theory (Loss Aversion) digabungin ke Technology Continuance Theory (TCT).";
+        function toggleNote(id) {
+            const note = db.notes.find(n => n.id === id);
+            if(note) {
+                note.isDone = !note.isDone;
+                saveToDatabase(DB_KEY_NOTES, db.notes);
+                renderNotes();
             }
+        }
+
+        function editNote(id) {
+            const note = db.notes.find(n => n.id === id);
+            if(!note) return;
+            
+            const newText = prompt("Edit catatan skripsi:", note.text);
+            if(newText !== null && newText.trim() !== "") {
+                note.text = newText.trim();
+                saveToDatabase(DB_KEY_NOTES, db.notes);
+                renderNotes();
+            }
+        }
+
+        function deleteNote(id) {
+            if(confirm("Yakin mau hapus catatan ini?")) {
+                db.notes = db.notes.filter(n => n.id !== id);
+                saveToDatabase(DB_KEY_NOTES, db.notes);
+                renderNotes();
+            }
+        }
+
+        function getMarkColor(mark) {
+            if(mark.includes('Target')) return 'var(--success)'; // Green
+            if(mark.includes('Urgent')) return 'var(--danger)'; // Red
+            if(mark.includes('Revisi')) return '#f7b801'; // Yellow
+            if(mark.includes('Ide')) return '#4cc9f0'; // Blue
+            return 'var(--primary)';
+        }
+
+        function renderNotes() {
+            const container = document.getElementById('notes-container');
+            if (db.notes.length === 0) {
+                container.innerHTML = `<p style="text-align:center; color:var(--text-muted); font-size:13px; margin-top:10px;">Yey! Belum ada task atau catatan baru.</p>`;
+                return;
+            }
+            
+            container.innerHTML = db.notes.map(note => `
+                <div style="background:var(--bg-body); padding:12px 15px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border-left:4px solid ${getMarkColor(note.mark)}; opacity: ${note.isDone ? '0.6' : '1'}; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
+                    <div style="display:flex; align-items:center; gap:15px; flex:1;">
+                        <input type="checkbox" ${note.isDone ? 'checked' : ''} onchange="toggleNote(${note.id})" style="width:20px; height:20px; cursor:pointer; accent-color:var(--primary);">
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">${note.mark}</span>
+                            <span style="font-size:14px; font-weight:500; text-decoration:${note.isDone ? 'line-through' : 'none'}; color:${note.isDone ? 'var(--text-muted)' : 'var(--text-main)'}; cursor:pointer;" onclick="toggleNote(${note.id})">${note.text}</span>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="editNote(${note.id})" style="background:var(--bg-card); border:1px solid var(--border); padding:6px; border-radius:6px; cursor:pointer; color:var(--text-main); font-size:12px; box-shadow:var(--shadow);" title="Edit">✏️</button>
+                        <button onclick="deleteNote(${note.id})" style="background:var(--danger); border:none; padding:6px; border-radius:6px; cursor:pointer; color:white; font-size:12px; box-shadow:var(--shadow);" title="Hapus">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
         }
 
         // === MODAL & FORMS ===
@@ -290,7 +346,7 @@
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
-        // === SIMPAN & HAPUS DATA ===
+        // === SIMPAN & HAPUS DATA JURNAL ===
         function saveData() {
             if (currentTab === 'literatur') {
                 const penulis = document.getElementById('inp-penulis').value.trim();
@@ -337,15 +393,14 @@
             }
         }
 
-        // === 🔄 RENDER ENGINE DENGAN LIVE SEARCH ===
+        // === 🔄 RENDER ENGINE ===
         function renderData() {
             const searchQuery = document.getElementById('searchInput').value.toLowerCase();
 
-            // Update Dashboard Counters (Total keseluruhan)
             document.getElementById('countLit').innerText = db.literatur.length;
             document.getElementById('countInd').innerText = db.indikator.length;
 
-            // Render Literatur Cards (Pakai Filter)
+            // Render Literatur
             const gridLit = document.getElementById('lit-grid');
             const filteredLit = db.literatur.filter(item => 
                 (item.penulis && item.penulis.toLowerCase().includes(searchQuery)) || 
@@ -371,7 +426,7 @@
                 `).join('');
             }
 
-            // Render Indikator Cards (Pakai Filter)
+            // Render Indikator
             const gridInd = document.getElementById('ind-grid');
             const filteredInd = db.indikator.filter(item => 
                 (item.kode && item.kode.toLowerCase().includes(searchQuery)) || 
@@ -398,7 +453,7 @@
             }
         }
 
-        // === 📥 BACKUP & EXPORT ===
+        // === 📥 EXPORT & RESTORE ===
         function exportCSV() {
             if(db.indikator.length === 0) return showToast('Data indikator kosong!', true);
             let csv = "Peran,Konstruk,Kode Item,Indikator Asli,Kuesioner Indonesia\n";
@@ -414,13 +469,8 @@
         }
 
         function exportJSON() {
-            // Backup juga nyimpen Quick Notes-nya biar aman sentosa
-            const backupData = {
-                ...db,
-                quickNotes: localStorage.getItem(DB_KEY_NOTES)
-            };
             const link = document.createElement("a");
-            link.href = URL.createObjectURL(new Blob([JSON.stringify(backupData)], { type: 'application/json' }));
+            link.href = URL.createObjectURL(new Blob([JSON.stringify(db)], { type: 'application/json' }));
             link.download = `Backup_Skripsi_Syla_${new Date().toISOString().slice(0,10)}.json`;
             link.click();
             showToast('💾 Backup berhasil diunduh!');
@@ -437,15 +487,13 @@
                     
                     db.literatur = imported.literatur || []; 
                     db.indikator = imported.indikator || [];
+                    db.notes = imported.notes || []; // Import notes juga
                     
                     saveToDatabase(DB_KEY_LIT, db.literatur);
                     saveToDatabase(DB_KEY_IND, db.indikator);
+                    saveToDatabase(DB_KEY_NOTES, db.notes);
                     
-                    if(imported.quickNotes !== undefined) {
-                        localStorage.setItem(DB_KEY_NOTES, imported.quickNotes);
-                        loadQuickNotes();
-                    }
-                    
+                    renderNotes();
                     renderData(); 
                     showToast('📂 Restore data sukses!');
                 } catch (err) { showToast("❌ File rusak atau bukan file backup!", true); }
@@ -457,7 +505,7 @@
         // Init
         document.querySelector('.fab').style.display = 'none';
         document.getElementById('search-box').style.display = 'none';
-        loadQuickNotes();
+        renderNotes();
         renderData();
     </script>
 </body>
