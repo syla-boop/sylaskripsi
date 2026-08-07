@@ -73,6 +73,10 @@
         input:focus, select:focus, textarea:focus { border-color: var(--primary); }
         textarea { height: 100px; resize: none; }
         
+        /* Quick Notes Textarea Khusus */
+        .notes-area { width: 100%; height: 80px; border: 2px dashed var(--border); border-radius: 8px; padding: 12px; background: transparent; color: var(--text-main); font-size: 14px; outline: none; resize: none; transition: 0.3s; }
+        .notes-area:focus { border-color: var(--primary); background: var(--bg-body); }
+        
         /* FAB */
         .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--primary); color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 30px; box-shadow: 0 10px 25px rgba(67, 97, 238, 0.5); border: none; cursor: pointer; z-index: 50; transition: transform 0.2s; }
         .fab:active { transform: scale(0.95); }
@@ -98,7 +102,7 @@
         <!-- Navigation Tabs -->
         <div class="nav-tabs">
             <div class="tab active" onclick="switchTab('dashboard')">📊 Dashboard</div>
-            <div class="tab" onclick="switchTab('literatur')">📚 Jurnal (Bab 2)</div>
+            <div class="tab" onclick="switchTab('literatur')">📚 Jurnal</div>
             <div class="tab" onclick="switchTab('indikator')">🎯 Indikator (SmartPLS)</div>
         </div>
 
@@ -120,9 +124,14 @@
                     <button class="btn-primary" style="margin-top:15px; width:100%; justify-content:center;" onclick="exportCSV()">📥 Export ke SmartPLS</button>
                 </div>
             </div>
+            
+            <!-- QUICK NOTES EDITABLE -->
             <div class="dash-card">
-                <h3>💡 Quick Notes untuk Bab 2</h3>
-                <p style="color:var(--text-muted); font-size:14px; margin-bottom:10px;">Reminder: Prospect Theory (Loss Aversion) digabungin ke Technology Continuance Theory (TCT).</p>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h3>💡 Quick Notes untuk Bab 2</h3>
+                    <span id="note-status" style="font-size:11px; font-weight:bold; color:var(--success); opacity:0; transition:0.3s;">Tersimpan ✔️</span>
+                </div>
+                <textarea id="quickNotesInput" class="notes-area" oninput="saveQuickNotes()" placeholder="Ketik catatan penting, revisi dospem, atau target ngerjain skripsi lu hari ini di sini... (Otomatis tersimpan)"></textarea>
             </div>
         </div>
 
@@ -164,6 +173,7 @@
         // === 🛡️ ADVANCED DATABASE SYSTEM ===
         const DB_KEY_LIT = 'syla_lit_master';
         const DB_KEY_IND = 'syla_ind_master';
+        const DB_KEY_NOTES = 'syla_quick_notes';
 
         function loadDatabase(key) {
             try {
@@ -187,6 +197,8 @@
             literatur: loadDatabase(DB_KEY_LIT),
             indikator: loadDatabase(DB_KEY_IND)
         };
+        
+        let noteTimeout;
 
         // === UI FUNCTIONS ===
         function toggleTheme() {
@@ -220,6 +232,30 @@
             toast.style.background = isError ? 'var(--danger)' : 'var(--success)';
             toast.style.bottom = '30px';
             setTimeout(() => toast.style.bottom = '-100px', 3000);
+        }
+
+        // === QUICK NOTES SAVER ===
+        function saveQuickNotes() {
+            const val = document.getElementById('quickNotesInput').value;
+            localStorage.setItem(DB_KEY_NOTES, val);
+            
+            // Animasi tulisan "Tersimpan"
+            const statusIndicator = document.getElementById('note-status');
+            statusIndicator.style.opacity = '1';
+            
+            clearTimeout(noteTimeout);
+            noteTimeout = setTimeout(() => {
+                statusIndicator.style.opacity = '0';
+            }, 1000);
+        }
+
+        function loadQuickNotes() {
+            const savedNotes = localStorage.getItem(DB_KEY_NOTES);
+            if (savedNotes !== null) {
+                document.getElementById('quickNotesInput').value = savedNotes;
+            } else {
+                document.getElementById('quickNotesInput').value = "Reminder: Prospect Theory (Loss Aversion) digabungin ke Technology Continuance Theory (TCT).";
+            }
         }
 
         // === MODAL & FORMS ===
@@ -378,8 +414,13 @@
         }
 
         function exportJSON() {
+            // Backup juga nyimpen Quick Notes-nya biar aman sentosa
+            const backupData = {
+                ...db,
+                quickNotes: localStorage.getItem(DB_KEY_NOTES)
+            };
             const link = document.createElement("a");
-            link.href = URL.createObjectURL(new Blob([JSON.stringify(db)], { type: 'application/json' }));
+            link.href = URL.createObjectURL(new Blob([JSON.stringify(backupData)], { type: 'application/json' }));
             link.download = `Backup_Skripsi_Syla_${new Date().toISOString().slice(0,10)}.json`;
             link.click();
             showToast('💾 Backup berhasil diunduh!');
@@ -393,10 +434,18 @@
                 try {
                     const imported = JSON.parse(event.target.result);
                     if(!imported.literatur && !imported.indikator) throw new Error("Format salah");
+                    
                     db.literatur = imported.literatur || []; 
                     db.indikator = imported.indikator || [];
+                    
                     saveToDatabase(DB_KEY_LIT, db.literatur);
                     saveToDatabase(DB_KEY_IND, db.indikator);
+                    
+                    if(imported.quickNotes !== undefined) {
+                        localStorage.setItem(DB_KEY_NOTES, imported.quickNotes);
+                        loadQuickNotes();
+                    }
+                    
                     renderData(); 
                     showToast('📂 Restore data sukses!');
                 } catch (err) { showToast("❌ File rusak atau bukan file backup!", true); }
@@ -408,6 +457,7 @@
         // Init
         document.querySelector('.fab').style.display = 'none';
         document.getElementById('search-box').style.display = 'none';
+        loadQuickNotes();
         renderData();
     </script>
 </body>
