@@ -69,7 +69,7 @@
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 5px; font-weight: 600; }
-        input[type="text"], select, textarea { width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 8px; background: var(--bg-body); color: var(--text-main); font-size: 14px; outline: none; }
+        input, select, textarea { width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 8px; background: var(--bg-body); color: var(--text-main); font-size: 14px; outline: none; }
         input:focus, select:focus, textarea:focus { border-color: var(--primary); }
         textarea { height: 100px; resize: none; }
         
@@ -79,10 +79,6 @@
 
         /* Toast */
         .toast { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); background: var(--success); color: white; padding: 12px 24px; border-radius: 30px; font-weight: bold; transition: bottom 0.4s; z-index: 1000; box-shadow: var(--shadow); }
-        
-        /* Attachment Button */
-        .btn-attach { padding: 10px; border: 2px solid var(--border); border-radius: 8px; background: var(--bg-body); cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
-        .btn-attach:hover { border-color: var(--primary); }
     </style>
 </head>
 <body>
@@ -91,10 +87,10 @@
     <header class="header">
         <h1>Syla's Skripsi App</h1>
         <div class="controls">
-            <button type="button" class="btn-icon" onclick="toggleTheme()" title="Mode Gelap/Terang">🌓</button>
-            <button type="button" class="btn-outline" onclick="document.getElementById('importFile').click()" title="Restore Data">📂</button>
+            <button class="btn-icon" onclick="toggleTheme()" title="Mode Gelap/Terang">🌓</button>
+            <button class="btn-outline" onclick="document.getElementById('importFile').click()" title="Restore Data">📂</button>
             <input type="file" id="importFile" style="display:none" onchange="importJSON(event)" accept=".json">
-            <button type="button" class="btn-primary" onclick="exportJSON()" title="Backup Data">💾 Backup</button>
+            <button class="btn-primary" onclick="exportJSON()" title="Backup Data">💾 Backup</button>
         </div>
     </header>
 
@@ -120,45 +116,33 @@
                 <div class="dash-card">
                     <h3>Indikator Kuesioner (Outer Model)</h3>
                     <h2 id="countInd">0</h2>
-                    <button type="button" class="btn-primary" style="margin-top:15px; width:100%; justify-content:center;" onclick="exportCSV()">📥 Export ke SmartPLS</button>
+                    <button class="btn-primary" style="margin-top:15px; width:100%; justify-content:center;" onclick="exportCSV()">📥 Export ke SmartPLS</button>
                 </div>
             </div>
             
-            <!-- ADVANCED QUICK NOTES / VISUAL DATABASE -->
+            <!-- ADVANCED QUICK NOTES / TO-DO LIST -->
             <div class="dash-card">
-                <h3>💡 Visual Notes & Tasks</h3>
-                <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Catat ide, tugas, atau lampirkan gambar/screenshot materi penting.</p>
+                <h3>💡 Task & Quick Notes</h3>
+                <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Catat revisi dosen, target hari ini, atau ide mendadak lu di sini.</p>
                 
-                <!-- Form Input Area yang Bener (Biar bisa di-Enter) -->
-                <form onsubmit="addNote(event)" style="display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; align-items:center;">
+                <!-- Input Area Baru (Ada Pilihan Tipe) -->
+                <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
                     <select id="note-type" style="padding:10px; border:2px solid var(--border); border-radius:8px; background:var(--bg-body); color:var(--text-main); font-weight:bold; outline:none; cursor:pointer;">
-                        <option value="task">☑️ Task</option>
-                        <option value="note">📌 Note</option>
+                        <option value="task">☑️ Task (Checklist)</option>
+                        <option value="note">📌 Sticky Note</option>
                     </select>
                     <select id="note-mark" style="padding:10px; border:2px solid var(--border); border-radius:8px; background:var(--bg-body); color:var(--text-main); font-weight:bold; outline:none; cursor:pointer;">
                         <option value="🎯 Target">🎯 Target</option>
                         <option value="🔥 Urgent">🔥 Urgent</option>
                         <option value="📝 Revisi">📝 Revisi</option>
                         <option value="💡 Ide">💡 Ide</option>
-                        <option value="🖼️ Gambar">🖼️ Gambar</option>
                     </select>
-                    <input type="text" id="note-input" placeholder="Ketik catatan di sini..." style="flex:1; min-width:150px;">
-                    
-                    <label class="btn-attach" title="Lampirkan Gambar">
-                        🖼️ <input type="file" id="note-image" accept="image/*" style="display:none;" onchange="handleImageSelect(event)">
-                    </label>
-                    
-                    <button type="submit" class="btn-primary">Tambah</button>
-                </form>
-
-                <!-- Preview Gambar Sebelum Upload -->
-                <div id="image-preview-container" style="display:none; position:relative; margin-bottom:20px; width:max-content;">
-                    <img id="preview-img" src="" style="max-height:120px; border-radius:8px; border:2px solid var(--primary);">
-                    <button type="button" onclick="clearImagePreview()" style="position:absolute; top:-10px; right:-10px; background:var(--danger); color:white; border-radius:50%; width:24px; height:24px; border:none; font-weight:bold; cursor:pointer; box-shadow:var(--shadow);">X</button>
+                    <input type="text" id="note-input" placeholder="Ketik tugas atau catatan di sini..." style="flex:1; padding:10px; border:2px solid var(--border); border-radius:8px; background:var(--bg-body); color:var(--text-main); outline:none; min-width:200px;" onkeypress="if(event.key==='Enter') addNote()">
+                    <button class="btn-primary" onclick="addNote()">Tambah</button>
                 </div>
 
                 <!-- Notes Container -->
-                <div id="notes-container" style="display:flex; flex-direction:column; gap:12px; max-height: 500px; overflow-y: auto; padding-right: 5px;">
+                <div id="notes-container" style="display:flex; flex-direction:column; gap:12px; max-height: 400px; overflow-y: auto; padding-right: 5px;">
                     <!-- Notes render here via JS -->
                 </div>
             </div>
@@ -176,21 +160,17 @@
     </div>
 
     <!-- Floating Action Button -->
-    <button type="button" class="fab" onclick="openModal()">+</button>
+    <button class="fab" onclick="openModal()">+</button>
 
-    <!-- Modal Form Tambah Data yang Bener -->
+    <!-- Modal Form Tambah Data -->
     <div class="modal-overlay" id="modal">
         <div class="modal">
             <div class="modal-header">
                 <h2 id="modal-title" style="font-size:18px;">Tambah Data</h2>
-                <button type="button" class="btn-icon" onclick="closeModal()">✕</button>
+                <button class="btn-icon" onclick="closeModal()">✕</button>
             </div>
-            
-            <form id="mainDataForm" onsubmit="saveData(event)">
-                <div id="form-container"></div>
-                <button type="submit" class="btn-primary" style="width:100%; justify-content:center; margin-top:20px;">Simpan Data</button>
-            </form>
-            
+            <div id="form-container"></div>
+            <button class="btn-primary" style="width:100%; justify-content:center; margin-top:20px;" onclick="saveData()">Simpan Data</button>
         </div>
     </div>
 
@@ -200,9 +180,7 @@
         // === 🛡️ ADVANCED DATABASE SYSTEM ===
         const DB_KEY_LIT = 'syla_lit_master';
         const DB_KEY_IND = 'syla_ind_master';
-        const DB_KEY_NOTES = 'syla_quick_notes_v3';
-
-        let currentNoteImageBase64 = null; 
+        const DB_KEY_NOTES = 'syla_quick_notes_v2';
 
         function loadDatabase(key) {
             try {
@@ -216,7 +194,7 @@
                 localStorage.setItem(key, JSON.stringify(data));
                 return true;
             } catch (error) {
-                alert("⚠️ Peringatan: Memori browser penuh! Hapus beberapa gambar lama atau klik Backup sekarang.");
+                alert("⚠️ Peringatan: Memori browser penuh atau akses diblokir! Klik Backup sekarang.");
                 return false;
             }
         }
@@ -227,6 +205,12 @@
             indikator: loadDatabase(DB_KEY_IND),
             notes: loadDatabase(DB_KEY_NOTES)
         };
+
+        if(db.notes.length === 0) {
+            db.notes.push({ id: 1, type: 'note', mark: '💡 Ide', text: 'Catatan pertama! Ini adalah format Sticky Note biasa tanpa checklist.', isDone: false });
+            db.notes.push({ id: 2, type: 'task', mark: '🎯 Target', text: 'Selesaikan sintesis 5 jurnal malam ini.', isDone: false });
+            saveToDatabase(DB_KEY_NOTES, db.notes);
+        }
 
         // === UI FUNCTIONS ===
         function toggleTheme() {
@@ -260,69 +244,19 @@
             setTimeout(() => toast.style.bottom = '-100px', 3000);
         }
 
-        // === 🖼️ IMAGE COMPRESSION SYSTEM ===
-        function handleImageSelect(event) {
-            const file = event.target.files[0];
-            if(!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.src = e.target.result;
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800; 
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > MAX_WIDTH) {
-                        height = Math.round((height * MAX_WIDTH) / width);
-                        width = MAX_WIDTH;
-                    }
-                    canvas.width = width;
-                    canvas.height = height;
-                    
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    currentNoteImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                    document.getElementById('preview-img').src = currentNoteImageBase64;
-                    document.getElementById('image-preview-container').style.display = 'block';
-                };
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function clearImagePreview() {
-            currentNoteImageBase64 = null;
-            document.getElementById('note-image').value = '';
-            document.getElementById('image-preview-container').style.display = 'none';
-        }
-
         // === 📝 TASK & QUICK NOTES LOGIC ===
-        function addNote(event) {
-            if(event) event.preventDefault(); // SUPER PENTING: Biar ga reload pas submit
-            
+        function addNote() {
             const text = document.getElementById('note-input').value.trim();
-            if(!text && !currentNoteImageBase64) return; 
+            if(!text) return;
             
             const mark = document.getElementById('note-mark').value;
             const type = document.getElementById('note-type').value;
             
-            db.notes.unshift({ 
-                id: Date.now(), 
-                type: type, 
-                mark: mark, 
-                text: text || "Lampiran Gambar", 
-                image: currentNoteImageBase64,
-                isDone: false 
-            });
+            db.notes.unshift({ id: Date.now(), type: type, mark: mark, text: text, isDone: false });
             
-            if(saveToDatabase(DB_KEY_NOTES, db.notes)) {
-                document.getElementById('note-input').value = '';
-                clearImagePreview();
-                renderNotes();
-            }
+            saveToDatabase(DB_KEY_NOTES, db.notes);
+            document.getElementById('note-input').value = '';
+            renderNotes();
         }
 
         function toggleNote(id) {
@@ -334,8 +268,20 @@
             }
         }
 
+        function editNote(id) {
+            const note = db.notes.find(n => n.id === id);
+            if(!note) return;
+            
+            const newText = prompt("Edit catatan skripsi:", note.text);
+            if(newText !== null && newText.trim() !== "") {
+                note.text = newText.trim();
+                saveToDatabase(DB_KEY_NOTES, db.notes);
+                renderNotes();
+            }
+        }
+
         function deleteNote(id) {
-            if(confirm("Yakin mau hapus catatan/gambar ini?")) {
+            if(confirm("Yakin mau hapus item ini?")) {
                 db.notes = db.notes.filter(n => n.id !== id);
                 saveToDatabase(DB_KEY_NOTES, db.notes);
                 renderNotes();
@@ -353,14 +299,42 @@
         function renderNotes() {
             const container = document.getElementById('notes-container');
             if (db.notes.length === 0) {
-                container.innerHTML = `<p style="text-align:center; color:var(--text-muted); font-size:13px; margin-top:10px;">Yey! Belum ada task atau catatan gambar baru.</p>`;
+                container.innerHTML = `<p style="text-align:center; color:var(--text-muted); font-size:13px; margin-top:10px;">Yey! Belum ada task atau catatan baru.</p>`;
                 return;
             }
             
             container.innerHTML = db.notes.map(note => {
-                const isTask = note.type !== 'note'; 
-                const imgElement = note.image ? `<img src="${note.image}" style="max-width:100%; max-height:250px; border-radius:8px; margin-top:10px; border:1px solid var(--border); object-fit:contain; display:block;">` : '';
-
+                const isTask = note.type !== 'note'; // Kalau bukan 'note', berarti dia 'task' (atau data lama)
                 return `
-                <div style="background:var(--bg-body); padding:16px; border-radius:10px; display:flex; justify-content:space-between; align-items:flex-start; border-left:4px solid ${getMarkColor(note.mark)}; opacity: ${note.isDone && isTask ? '0.6' : '1'}; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
-                    <div style="display:flex; align-items:flex-start; gap:15px; flex:1; overflow:hidde
+                <div style="background:var(--bg-body); padding:12px 15px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border-left:4px solid ${getMarkColor(note.mark)}; opacity: ${note.isDone && isTask ? '0.6' : '1'}; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
+                    <div style="display:flex; align-items:center; gap:15px; flex:1;">
+                        ${isTask ? `<input type="checkbox" ${note.isDone ? 'checked' : ''} onchange="toggleNote(${note.id})" style="width:20px; height:20px; cursor:pointer; accent-color:var(--primary);">` : `<span style="font-size:20px;">📌</span>`}
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">${note.mark}</span>
+                            <span style="font-size:14px; font-weight:500; text-decoration:${note.isDone && isTask ? 'line-through' : 'none'}; color:${note.isDone && isTask ? 'var(--text-muted)' : 'var(--text-main)'}; ${isTask ? 'cursor:pointer;' : ''}" ${isTask ? `onclick="toggleNote(${note.id})"` : ''}>${note.text}</span>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="editNote(${note.id})" style="background:var(--bg-card); border:1px solid var(--border); padding:6px; border-radius:6px; cursor:pointer; color:var(--text-main); font-size:12px; box-shadow:var(--shadow);" title="Edit">✏️</button>
+                        <button onclick="deleteNote(${note.id})" style="background:var(--danger); border:none; padding:6px; border-radius:6px; cursor:pointer; color:white; font-size:12px; box-shadow:var(--shadow);" title="Hapus">🗑️</button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // === MODAL & FORMS ===
+        function openModal() {
+            const container = document.getElementById('form-container');
+            const title = document.getElementById('modal-title');
+            container.innerHTML = ''; 
+
+            if (currentTab === 'literatur') {
+                title.innerText = '📚 Tambah Sintesis Jurnal';
+                container.innerHTML = `
+                    <div class="form-group"><label>Judul Jurnal / Artikel</label><input type="text" id="inp-judul" placeholder="Contoh: Understanding the impact of..." required></div>
+                    <div class="form-group"><label>Penulis & Tahun</label><input type="text" id="inp-penulis" placeholder="Contoh: Kahneman & Tversky (1979)" required></div>
+                    <div class="form-group"><label>Fokus Variabel / Konstruk</label><input type="text" id="inp-var" placeholder="Contoh: Loss Aversion" required></div>
+                    <div class="form-group"><label>Kutipan PDF Asli</label><textarea id="inp-kutipan" placeholder="Paste bahasa Inggrisnya di sini..."></textarea></div>
+                    <div class="form-group"><label>Ide / Posisi di Bab 2</label><textarea id="inp-ide" placeholder="Contoh: Buat transisi ke TCT..."></textarea></div>
+                `;
