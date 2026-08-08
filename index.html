@@ -329,6 +329,70 @@
                 saveToDatabase(DB_KEY_NOTES, db.notes);
                 renderNotes();
             }
+                    function editNote(id) {
+            const note = db.notes.find(n => n.id === id);
+            if(!note) return;
+            
+            // Bikin elemen pop-up modal on-the-fly pakai JS biar lu ga usah ubah HTML
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.style.display = 'flex';
+            overlay.style.zIndex = '9999'; // Pastiin paling atas
+
+            overlay.innerHTML = `
+                <div class="modal" style="width: 90%; max-width: 400px; animation: fadeIn 0.3s;">
+                    <div class="modal-header">
+                        <h2 style="font-size:16px;">✏️ Edit Notes / Task</h2>
+                        <button type="button" class="btn-icon" onclick="this.closest('.modal-overlay').remove()">✕</button>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipe Catatan</label>
+                        <select id="edit-note-type" style="width:100%; padding:12px; border-radius:8px; border:2px solid var(--border); background:var(--bg-body); color:var(--text-main); font-weight:bold; outline:none;">
+                            <option value="task" ${note.type === 'task' ? 'selected' : ''}>☑️ Task (Checklist)</option>
+                            <option value="note" ${note.type === 'note' ? 'selected' : ''}>📌 Sticky Note</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Label / Mark</label>
+                        <select id="edit-note-mark" style="width:100%; padding:12px; border-radius:8px; border:2px solid var(--border); background:var(--bg-body); color:var(--text-main); font-weight:bold; outline:none;">
+                            <option value="🎯 Target" ${note.mark === '🎯 Target' ? 'selected' : ''}>🎯 Target</option>
+                            <option value="🔥 Urgent" ${note.mark === '🔥 Urgent' ? 'selected' : ''}>🔥 Urgent</option>
+                            <option value="📝 Revisi" ${note.mark === '📝 Revisi' ? 'selected' : ''}>📝 Revisi</option>
+                            <option value="💡 Ide" ${note.mark === '💡 Ide' ? 'selected' : ''}>💡 Ide</option>
+                            <option value="🖼️ Gambar" ${note.mark === '🖼️ Gambar' ? 'selected' : ''}>🖼️ Gambar</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Teks Catatan</label>
+                        <textarea id="edit-note-text" style="width:100%; padding:12px; border-radius:8px; border:2px solid var(--border); background:var(--bg-body); color:var(--text-main); height:90px; outline:none; resize:none;">${note.text}</textarea>
+                    </div>
+                    <button type="button" class="btn-primary" style="width:100%; justify-content:center; margin-top:10px;" id="save-edit-note">Simpan Perubahan</button>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            // Aksi pas tombol "Simpan Perubahan" dipencet
+            document.getElementById('save-edit-note').onclick = function() {
+                const newType = document.getElementById('edit-note-type').value;
+                const newMark = document.getElementById('edit-note-mark').value;
+                const newText = document.getElementById('edit-note-text').value.trim();
+
+                if(newText !== "") {
+                    note.type = newType;
+                    note.mark = newMark;
+                    note.text = newText;
+                    
+                    saveToDatabase(DB_KEY_NOTES, db.notes);
+                    renderNotes();
+                    showToast('✅ Catatan berhasil diupdate!');
+                } else {
+                    showToast('Teks tidak boleh kosong!', true);
+                }
+                overlay.remove(); // Tutup modal otomatis setelah disave
+            };
+                    }
+            
         }
 
         function deleteNote(id) {
