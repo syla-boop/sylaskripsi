@@ -297,12 +297,10 @@
             document.getElementById('note-image').value = '';
             document.getElementById('image-preview-container').style.display = 'none';
         }
-
-        // === 📝 TASK & QUICK NOTES LOGIC ===
-        function addNote(event) {
-            if(event) event.preventDefault(); 
-            
+ // === 📝 TASK & QUICK NOTES LOGIC ===
+        function addNote() {
             const text = document.getElementById('note-input').value.trim();
+            // Boleh submit kalau ada teks ATAU ada gambar
             if(!text && !currentNoteImageBase64) return; 
             
             const mark = document.getElementById('note-mark').value;
@@ -312,7 +310,7 @@
                 id: Date.now(), 
                 type: type, 
                 mark: mark, 
-                text: text || "Lampiran Gambar", 
+                text: text || "Lampiran Gambar", // Kasih teks default kalau cuma kirim gambar
                 image: currentNoteImageBase64,
                 isDone: false 
             });
@@ -358,8 +356,226 @@
             
             container.innerHTML = db.notes.map(note => {
                 const isTask = note.type !== 'note'; 
+                // Render elemen gambar kalau ada
                 const imgElement = note.image ? `<img src="${note.image}" style="max-width:100%; max-height:250px; border-radius:8px; margin-top:10px; border:1px solid var(--border); object-fit:contain; display:block;">` : '';
 
                 return `
                 <div style="background:var(--bg-body); padding:16px; border-radius:10px; display:flex; justify-content:space-between; align-items:flex-start; border-left:4px solid ${getMarkColor(note.mark)}; opacity: ${note.isDone && isTask ? '0.6' : '1'}; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
-                    <div style="display:flex; align-items:flex-start; gap:15px; flex:1; overf
+                    <div style="display:flex; align-items:flex-start; gap:15px; flex:1; overflow:hidden;">
+                        ${isTask ? `<input type="checkbox" ${note.isDone ? 'checked' : ''} onchange="toggleNote(${note.id})" style="width:20px; height:20px; cursor:pointer; accent-color:var(--primary); margin-top:4px;">` : `<span style="font-size:20px; margin-top:2px;">📌</span>`}
+                        <div style="display:flex; flex-direction:column; gap:4px; width:100%;">
+                            <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">${note.mark}</span>
+                            <span style="font-size:14px; font-weight:500; text-decoration:${note.isDone && isTask ? 'line-through' : 'none'}; color:${note.isDone && isTask ? 'var(--text-muted)' : 'var(--text-main)'}; ${isTask ? 'cursor:pointer;' : ''}" ${isTask ? `onclick="toggleNote(${note.id})"` : ''}>${note.text}</span>
+                            ${imgElement}
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px; margin-left:10px;">
+                        <button onclick="deleteNote(${note.id})" style="background:var(--danger); border:none; padding:8px; border-radius:8px; cursor:pointer; color:white; font-size:12px; box-shadow:var(--shadow);" title="Hapus">🗑️</button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // === MODAL & FORMS ===
+        function openModal() {
+            const container = document.getElementById('form-container');
+            const title = document.getElementById('modal-title');
+            container.innerHTML = ''; 
+
+            if (currentTab === 'literatur') {
+                title.innerText = '📚 Tambah Sintesis Jurnal';
+                container.innerHTML = `
+                    <div class="form-group"><label>Judul Jurnal / Artikel</label><input type="text" id="inp-judul" placeholder="Contoh: Understanding the impact of..." required></div>
+                    <div class="form-group"><label>Penulis & Tahun</label><input type="text" id="inp-penulis" placeholder="Contoh: Kahneman & Tversky (1979)" required></div>
+                    <div class="form-group"><label>Fokus Variabel / Konstruk</label><input type="text" id="inp-var" placeholder="Contoh: Loss Aversion" required></div>
+                    <div class="form-group"><label>Kutipan PDF Asli</label><textarea id="inp-kutipan" placeholder="Paste bahasa Inggrisnya di sini..."></textarea></div>
+                    <div class="form-group"><label>Ide / Posisi di Bab 2</label><textarea id="inp-ide" placeholder="Contoh: Buat transisi ke TCT..."></textarea></div>
+                `;
+            } else if (currentTab === 'indikator') {
+                title.innerText = '🎯 Tambah Indikator (Outer Model)';
+                container.innerHTML = `
+                    <div style="display:flex; gap:10px;">
+                        <div class="form-group" style="flex:1"><label>Peran Konstruk</label>
+                        <select id="inp-peran"><option>Eksogen (X)</option><option>Mediasi (Z)</option><option>Endogen (Y)</option></select></div>
+                        <div class="form-group" style="flex:1"><label>Kode Item</label><input type="text" id="inp-kode" placeholder="Contoh: PU_1" required></div>
+                    </div>
+                    <div class="form-group"><label>Nama Konstruk</label><input type="text" id="inp-konstruk" placeholder="Contoh: Perceived Usefulness" required></div>
+                    <div class="form-group"><label>Indikator Asli (Dari PDF)</label><textarea id="inp-asli" style="height:70px" placeholder="Paste pernyataan asli jurnal..."></textarea></div>
+                    <div class="form-group"><label>Draft Kuesioner (Indo)</label><textarea id="inp-indo" style="height:70px" placeholder="Saya merasa menggunakan sistem ini..."></textarea></div>
+                `;
+            }
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        // === SIMPAN & HAPUS DATA JURNAL ===
+        function saveData() {
+            if (currentTab === 'literatur') {
+                const judul = document.getElementById('inp-judul').value.trim();
+                const penulis = document.getElementById('inp-penulis').value.trim();
+                
+                if(!judul || !penulis) return showToast('Judul dan Penulis wajib diisi!', true);
+
+                db.literatur.unshift({
+                    id: Date.now(), 
+                    judul: judul,
+                    penulis: penulis,
+                    variabel: document.getElementById('inp-var').value.trim() || 'Umum',
+                    kutipan: document.getElementById('inp-kutipan').value.trim(),
+                    ide: document.getElementById('inp-ide').value.trim(),
+                    timestamp: new Date().toLocaleString('id-ID')
+                });
+                
+                if(saveToDatabase(DB_KEY_LIT, db.literatur)) showToast('✅ Sintesis Jurnal Tersimpan!');
+            } else {
+                const kode = document.getElementById('inp-kode').value.trim();
+                if(!kode) return showToast('Kode Item wajib diisi!', true);
+
+                db.indikator.unshift({
+                    id: Date.now(),
+                    peran: document.getElementById('inp-peran').value,
+                    kode: kode,
+                    konstruk: document.getElementById('inp-konstruk').value.trim(),
+                    asli: document.getElementById('inp-asli').value.trim(),
+                    indo: document.getElementById('inp-indo').value.trim(),
+                    timestamp: new Date().toLocaleString('id-ID')
+                });
+                
+                if(saveToDatabase(DB_KEY_IND, db.indikator)) showToast('✅ Indikator SmartPLS Tersimpan!');
+            }
+            closeModal();
+            renderData();
+        }
+
+        function deleteItem(type, id) {
+            if(confirm('Yakin mau hapus data ini dari skripsi lu?')) {
+                db[type] = db[type].filter(item => item.id !== id);
+                const isSaved = saveToDatabase(type === 'literatur' ? DB_KEY_LIT : DB_KEY_IND, db[type]);
+                if(isSaved) {
+                    renderData();
+                    showToast('🗑️ Data berhasil dihapus!');
+                }
+            }
+        }
+
+        // === 🔄 RENDER ENGINE ===
+        function renderData() {
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+
+            document.getElementById('countLit').innerText = db.literatur.length;
+            document.getElementById('countInd').innerText = db.indikator.length;
+
+            // Render Literatur
+            const gridLit = document.getElementById('lit-grid');
+            const filteredLit = db.literatur.filter(item => 
+                (item.judul && item.judul.toLowerCase().includes(searchQuery)) ||
+                (item.penulis && item.penulis.toLowerCase().includes(searchQuery)) || 
+                (item.variabel && item.variabel.toLowerCase().includes(searchQuery)) ||
+                (item.kutipan && item.kutipan.toLowerCase().includes(searchQuery)) ||
+                (item.ide && item.ide.toLowerCase().includes(searchQuery))
+            );
+
+            if (filteredLit.length === 0) {
+                gridLit.innerHTML = `<p style="color:var(--text-muted); text-align:center; width:100%; grid-column: 1 / -1;">${searchQuery ? 'Pencarian tidak ditemukan 🧐' : 'Belum ada sintesis jurnal. Gas kerjain Bab 2!'}</p>`;
+            } else {
+                gridLit.innerHTML = filteredLit.map(item => `
+                    <div class="data-card">
+                        <span class="badge">${item.variabel}</span>
+                        <h4 style="margin-top:20px; margin-bottom:5px;">${item.judul || 'Tanpa Judul'}</h4>
+                        <p style="color:var(--primary); font-weight:600; font-size:13px; margin-bottom:12px;">👤 ${item.penulis}</p>
+                        ${item.kutipan ? `<div class="quote-box">"${item.kutipan}"</div>` : ''}
+                        <p><strong>Ide:</strong> ${item.ide}</p>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                            <span style="font-size:10px; color:var(--border);">${item.timestamp || ''}</span>
+                            <button class="btn-danger" onclick="deleteItem('literatur', ${item.id})">Hapus</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Render Indikator
+            const gridInd = document.getElementById('ind-grid');
+            const filteredInd = db.indikator.filter(item => 
+                (item.kode && item.kode.toLowerCase().includes(searchQuery)) || 
+                (item.konstruk && item.konstruk.toLowerCase().includes(searchQuery)) ||
+                (item.indo && item.indo.toLowerCase().includes(searchQuery)) ||
+                (item.asli && item.asli.toLowerCase().includes(searchQuery))
+            );
+
+            if (filteredInd.length === 0) {
+                gridInd.innerHTML = `<p style="color:var(--text-muted); text-align:center; width:100%; grid-column: 1 / -1;">${searchQuery ? 'Pencarian tidak ditemukan 🧐' : 'Belum ada indikator untuk kuesioner.'}</p>`;
+            } else {
+                gridInd.innerHTML = filteredInd.map(item => `
+                    <div class="data-card">
+                        <span class="badge">${item.kode}</span>
+                        <p style="font-size:12px; margin:0; color:var(--primary); font-weight:bold">${item.peran} • ${item.konstruk}</p>
+                        <h4 style="margin-top:5px; padding-right:0;">"${item.indo}"</h4>
+                        <p style="font-size:12px">Asli: <i>${item.asli}</i></p>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                            <span style="font-size:10px; color:var(--border);">${item.timestamp || ''}</span>
+                            <button class="btn-danger" onclick="deleteItem('indikator', ${item.id})">Hapus</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // === 📥 EXPORT & RESTORE ===
+        function exportCSV() {
+            if(db.indikator.length === 0) return showToast('Data indikator kosong!', true);
+            let csv = "Peran,Konstruk,Kode Item,Indikator Asli,Kuesioner Indonesia\n";
+            db.indikator.forEach(r => {
+                const safeAsli = r.asli ? r.asli.replace(/"/g, '""') : '';
+                const safeIndo = r.indo ? r.indo.replace(/"/g, '""') : '';
+                csv += `"${r.peran}","${r.konstruk}","${r.kode}","${safeAsli}","${safeIndo}"\n`;
+            });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+            link.download = "Indikator_SmartPLS_Syla.csv";
+            link.click();
+        }
+
+        function exportJSON() {
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(new Blob([JSON.stringify(db)], { type: 'application/json' }));
+            link.download = `Backup_Skripsi_Syla_${new Date().toISOString().slice(0,10)}.json`;
+            link.click();
+            showToast('💾 Backup berhasil diunduh!');
+        }
+
+        function importJSON(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const imported = JSON.parse(event.target.result);
+                    if(!imported.literatur && !imported.indikator) throw new Error("Format salah");
+                    
+                    db.literatur = imported.literatur || []; 
+                    db.indikator = imported.indikator || [];
+                    db.notes = imported.notes || []; 
+                    
+                    saveToDatabase(DB_KEY_LIT, db.literatur);
+                    saveToDatabase(DB_KEY_IND, db.indikator);
+                    saveToDatabase(DB_KEY_NOTES, db.notes);
+                    
+                    renderNotes();
+                    renderData(); 
+                    showToast('📂 Restore data sukses!');
+                } catch (err) { showToast("❌ File rusak atau bukan file backup!", true); }
+                e.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        // Init
+        document.querySelector('.fab').style.display = 'none';
+        document.getElementById('search-box').style.display = 'none';
+        renderNotes();
+        renderData();
+    </script>
+</body>
+</html>
